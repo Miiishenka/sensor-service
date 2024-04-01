@@ -5,7 +5,6 @@ import (
 	"errors"
 	"homework/internal/domain"
 	"sync"
-	"time"
 )
 
 var (
@@ -21,6 +20,15 @@ func NewEventRepository() *EventRepository {
 	return &EventRepository{}
 }
 
+func (r *EventRepository) getEvents(sensorId int64) []*domain.Event {
+	owners, ok := r.events.Load(sensorId)
+	if !ok {
+		return []*domain.Event{}
+	}
+
+	return owners.([]*domain.Event)
+}
+
 func (r *EventRepository) SaveEvent(ctx context.Context, event *domain.Event) error {
 	select {
 	case <-ctx.Done():
@@ -29,7 +37,8 @@ func (r *EventRepository) SaveEvent(ctx context.Context, event *domain.Event) er
 		if event == nil {
 			return ErrEventIsNil
 		}
-		r.events.Store(event, struct{}{})
+
+		r.events.Store(event.SensorID, append(r.getEvents(event.SensorID), event))
 		return nil
 	}
 }
@@ -39,24 +48,17 @@ func (r *EventRepository) GetLastEventBySensorID(ctx context.Context, id int64) 
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
-		var lastEvent *domain.Event
-		var lastEventTime time.Time
-		r.events.Range(func(key, _ any) bool {
-			event, ok := key.(*domain.Event)
-			if !ok || event.SensorID != id {
-				return true
-			}
+		value, ok := r.events.Load(id)
+		if !ok {
+			return nil, ErrEventNotFound
+		}
 
-			if event.Timestamp.After(lastEventTime) {
-				lastEventTime = event.Timestamp
+		events := value.([]*domain.Event)
+		lastEvent := events[0]
+		for _, event := range events {
+			if event.Timestamp.After(lastEvent.Timestamp) {
 				lastEvent = event
 			}
-
-			return true
-		})
-
-		if lastEvent == nil {
-			return nil, ErrEventNotFound
 		}
 
 		return lastEvent, nil

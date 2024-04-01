@@ -8,11 +8,11 @@ import (
 )
 
 type Sensor struct {
-	sensorRepository SensorRepository
+	sr SensorRepository
 }
 
 func NewSensor(sr SensorRepository) *Sensor {
-	return &Sensor{sensorRepository: sr}
+	return &Sensor{sr: sr}
 }
 
 func (s *Sensor) RegisterSensor(ctx context.Context, sensor *domain.Sensor) (*domain.Sensor, error) {
@@ -24,9 +24,9 @@ func (s *Sensor) RegisterSensor(ctx context.Context, sensor *domain.Sensor) (*do
 		return nil, ErrWrongSensorSerialNumber
 	}
 
-	findSensor, err := s.sensorRepository.GetSensorBySerialNumber(ctx, sensor.SerialNumber)
+	findSensor, err := s.sr.GetSensorBySerialNumber(ctx, sensor.SerialNumber)
 	if errors.Is(err, inmemory.ErrSensorNotFound) {
-		return sensor, s.sensorRepository.SaveSensor(ctx, sensor)
+		return sensor, s.sr.SaveSensor(ctx, sensor)
 	}
 
 	if err != nil {
@@ -37,9 +37,9 @@ func (s *Sensor) RegisterSensor(ctx context.Context, sensor *domain.Sensor) (*do
 }
 
 func (s *Sensor) GetSensors(ctx context.Context) ([]domain.Sensor, error) {
-	return s.sensorRepository.GetSensors(ctx)
+	return s.sr.GetSensors(ctx)
 }
 
 func (s *Sensor) GetSensorByID(ctx context.Context, id int64) (*domain.Sensor, error) {
-	return s.sensorRepository.GetSensorByID(ctx, id)
+	return s.sr.GetSensorByID(ctx, id)
 }
