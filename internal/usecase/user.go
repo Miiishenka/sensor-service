@@ -6,13 +6,13 @@ import (
 )
 
 type User struct {
-	userRepository   UserRepository
-	ownerRepository  SensorOwnerRepository
-	sensorRepository SensorRepository
+	ur  UserRepository
+	sor SensorOwnerRepository
+	sr  SensorRepository
 }
 
 func NewUser(ur UserRepository, sor SensorOwnerRepository, sr SensorRepository) *User {
-	return &User{userRepository: ur, ownerRepository: sor, sensorRepository: sr}
+	return &User{ur: ur, sor: sor, sr: sr}
 }
 
 func (u *User) RegisterUser(ctx context.Context, user *domain.User) (*domain.User, error) {
@@ -20,34 +20,34 @@ func (u *User) RegisterUser(ctx context.Context, user *domain.User) (*domain.Use
 		return nil, ErrInvalidUserName
 	}
 
-	return user, u.userRepository.SaveUser(ctx, user)
+	return user, u.ur.SaveUser(ctx, user)
 }
 
 func (u *User) AttachSensorToUser(ctx context.Context, userID, sensorID int64) error {
-	_, err := u.userRepository.GetUserByID(ctx, userID)
+	_, err := u.ur.GetUserByID(ctx, userID)
 	if err != nil {
 		return err
 	}
 
-	_, err = u.sensorRepository.GetSensorByID(ctx, sensorID)
+	_, err = u.sr.GetSensorByID(ctx, sensorID)
 	if err != nil {
 		return err
 	}
 
-	return u.ownerRepository.SaveSensorOwner(ctx, domain.SensorOwner{UserID: userID, SensorID: sensorID})
+	return u.sor.SaveSensorOwner(ctx, domain.SensorOwner{UserID: userID, SensorID: sensorID})
 }
 
 func (u *User) GetUserSensors(ctx context.Context, userID int64) ([]domain.Sensor, error) {
-	_, err := u.userRepository.GetUserByID(ctx, userID)
+	_, err := u.ur.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
 
-	owners, err := u.ownerRepository.GetSensorsByUserID(ctx, userID)
-	var sensors []domain.Sensor
+	owners, err := u.sor.GetSensorsByUserID(ctx, userID)
+	sensors := make([]domain.Sensor, 0, len(owners))
 
 	for _, owner := range owners {
-		sensor, findErr := u.sensorRepository.GetSensorByID(ctx, owner.SensorID)
+		sensor, findErr := u.sr.GetSensorByID(ctx, owner.SensorID)
 		if findErr != nil {
 			return nil, findErr
 		}

@@ -24,6 +24,12 @@ func (r *SensorOwnerRepository) SaveSensorOwner(ctx context.Context, sensorOwner
 			return err
 		}
 
+		for _, owner := range owners {
+			if owner.SensorID == sensorOwner.SensorID {
+				return nil
+			}
+		}
+
 		r.sensorOwners.Store(sensorOwner.UserID, append(owners, sensorOwner))
 		return nil
 	}

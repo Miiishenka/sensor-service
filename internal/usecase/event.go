@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"homework/internal/domain"
-	"time"
 )
 
 type Event struct {
@@ -16,7 +15,7 @@ func NewEvent(er EventRepository, sr SensorRepository) *Event {
 }
 
 func (e *Event) ReceiveEvent(ctx context.Context, event *domain.Event) error {
-	if event.Timestamp == (time.Time{}) {
+	if event.Timestamp.IsZero() {
 		return ErrInvalidEventTimestamp
 	}
 
