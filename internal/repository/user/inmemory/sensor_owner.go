@@ -3,10 +3,11 @@ package inmemory
 import (
 	"context"
 	"homework/internal/domain"
+	"sync"
 )
 
 type SensorOwnerRepository struct {
-	// TODO добавьте реализацию
+	sensorOwners sync.Map
 }
 
 func NewSensorOwnerRepository() *SensorOwnerRepository {
@@ -14,11 +15,30 @@ func NewSensorOwnerRepository() *SensorOwnerRepository {
 }
 
 func (r *SensorOwnerRepository) SaveSensorOwner(ctx context.Context, sensorOwner domain.SensorOwner) error {
-	// TODO добавьте реализацию
-	return nil
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		owners, err := r.GetSensorsByUserID(ctx, sensorOwner.UserID)
+		if err != nil {
+			return err
+		}
+
+		r.sensorOwners.Store(sensorOwner.UserID, append(owners, sensorOwner))
+		return nil
+	}
 }
 
 func (r *SensorOwnerRepository) GetSensorsByUserID(ctx context.Context, userID int64) ([]domain.SensorOwner, error) {
-	// TODO добавьте реализацию
-	return nil, nil
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		owners, ok := r.sensorOwners.Load(userID)
+		if !ok {
+			return []domain.SensorOwner{}, nil
+		}
+
+		return owners.([]domain.SensorOwner), nil
+	}
 }
