@@ -5,6 +5,7 @@ import (
 	"errors"
 	"homework/internal/domain"
 	"sync"
+	"time"
 )
 
 var (
@@ -28,6 +29,7 @@ func (r *EventRepository) SaveEvent(ctx context.Context, event *domain.Event) er
 		if event == nil {
 			return ErrEventIsNil
 		}
+		event.Timestamp = time.Now()
 		r.events.Store(event.SensorID, event)
 		return nil
 	}
