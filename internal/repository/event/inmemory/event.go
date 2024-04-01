@@ -30,7 +30,7 @@ func (r *EventRepository) SaveEvent(ctx context.Context, event *domain.Event) er
 			return ErrEventIsNil
 		}
 		event.Timestamp = time.Now()
-		r.events.Store(event.SensorID, event)
+		r.events.Store(event, struct{}{})
 		return nil
 	}
 }
@@ -40,10 +40,26 @@ func (r *EventRepository) GetLastEventBySensorID(ctx context.Context, id int64) 
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
-		event, ok := r.events.Load(id)
-		if !ok {
+		var lastEvent *domain.Event
+		var lastEventTime time.Time
+		r.events.Range(func(key, _ any) bool {
+			event, ok := key.(*domain.Event)
+			if !ok || event.SensorID != id {
+				return true
+			}
+
+			if event.Timestamp.After(lastEventTime) {
+				lastEventTime = event.Timestamp
+				lastEvent = event
+			}
+
+			return true
+		})
+
+		if lastEvent == nil {
 			return nil, ErrEventNotFound
 		}
-		return event.(*domain.Event), nil
+
+		return lastEvent, nil
 	}
 }
