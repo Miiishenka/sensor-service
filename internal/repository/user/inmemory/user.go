@@ -4,12 +4,18 @@ import (
 	"context"
 	"errors"
 	"homework/internal/domain"
+	"sync"
+	"sync/atomic"
 )
 
-var ErrUserNotFound = errors.New("user not found")
+var (
+	ErrUserNotFound = errors.New("user not found")
+	ErrUserIsNull   = errors.New("user is nil")
+)
 
 type UserRepository struct {
-	// TODO добавьте реализацию
+	users  sync.Map
+	lastId int64
 }
 
 func NewUserRepository() *UserRepository {
@@ -17,11 +23,29 @@ func NewUserRepository() *UserRepository {
 }
 
 func (r *UserRepository) SaveUser(ctx context.Context, user *domain.User) error {
-	// TODO добавьте реализацию
-	return nil
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		if user == nil {
+			return ErrUserIsNull
+		}
+		user.ID = atomic.AddInt64(&r.lastId, 1)
+		r.users.Store(user.ID, user)
+		return nil
+	}
 }
 
 func (r *UserRepository) GetUserByID(ctx context.Context, id int64) (*domain.User, error) {
-	// TODO добавьте реализацию
-	return nil, nil
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		user, ok := r.users.Load(id)
+		if !ok {
+			return nil, ErrUserNotFound
+		}
+
+		return user.(*domain.User), nil
+	}
 }
