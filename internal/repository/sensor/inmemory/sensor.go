@@ -34,7 +34,6 @@ func (r *SensorRepository) SaveSensor(ctx context.Context, sensor *domain.Sensor
 
 		existSensor, _ := r.GetSensorBySerialNumber(ctx, sensor.SerialNumber)
 		if existSensor != nil {
-			sensor = existSensor
 			return nil
 		}
 

@@ -53,7 +53,11 @@ func (r *EventRepository) GetLastEventBySensorID(ctx context.Context, id int64) 
 			return nil, ErrEventNotFound
 		}
 
-		events := value.([]*domain.Event)
+		events, ok := value.([]*domain.Event)
+		if !ok || len(events) < 1 {
+			return nil, ErrEventNotFound
+		}
+
 		lastEvent := events[0]
 		for _, event := range events {
 			if event.Timestamp.After(lastEvent.Timestamp) {
