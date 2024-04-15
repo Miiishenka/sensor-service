@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"homework/internal/domain"
+	"homework/internal/usecase"
 	"sync"
 	"sync/atomic"
 	"time"
 )
 
 var (
-	ErrSensorNotFound = errors.New("sensor not found")
-	ErrSensorIsNil    = errors.New("sensor is nil")
+	ErrSensorIsNil = errors.New("sensor is nil")
 )
 
 type SensorRepository struct {
@@ -66,7 +66,7 @@ func (r *SensorRepository) GetSensorByID(ctx context.Context, id int64) (*domain
 	default:
 		sensor, ok := r.sensors.Load(id)
 		if !ok {
-			return nil, ErrSensorNotFound
+			return nil, usecase.ErrSensorNotFound
 		}
 
 		return sensor.(*domain.Sensor), nil
@@ -91,7 +91,7 @@ func (r *SensorRepository) GetSensorBySerialNumber(ctx context.Context, sn strin
 		})
 
 		if !found {
-			return nil, ErrSensorNotFound
+			return nil, usecase.ErrSensorNotFound
 		}
 
 		return foundSensor, nil
