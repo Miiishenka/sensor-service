@@ -4,13 +4,11 @@ import (
 	"context"
 	"errors"
 	"homework/internal/domain"
+	"homework/internal/usecase"
 	"sync"
 )
 
-var (
-	ErrEventNotFound = errors.New("event not found")
-	ErrEventIsNil    = errors.New("event is nil")
-)
+var ErrEventIsNil = errors.New("event is nil")
 
 type EventRepository struct {
 	events sync.Map
@@ -50,12 +48,12 @@ func (r *EventRepository) GetLastEventBySensorID(ctx context.Context, id int64) 
 	default:
 		value, ok := r.events.Load(id)
 		if !ok {
-			return nil, ErrEventNotFound
+			return nil, usecase.ErrEventNotFound
 		}
 
 		events, ok := value.([]*domain.Event)
 		if !ok || len(events) < 1 {
-			return nil, ErrEventNotFound
+			return nil, usecase.ErrEventNotFound
 		}
 
 		lastEvent := events[0]
