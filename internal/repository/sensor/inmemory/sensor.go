@@ -10,9 +10,7 @@ import (
 	"time"
 )
 
-var (
-	ErrSensorIsNil = errors.New("sensor is nil")
-)
+var ErrSensorIsNil = errors.New("sensor is nil")
 
 type SensorRepository struct {
 	sensors sync.Map
