@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"homework/internal/domain"
-	"homework/internal/repository/sensor/inmemory"
 )
 
 type Sensor struct {
@@ -25,7 +24,7 @@ func (s *Sensor) RegisterSensor(ctx context.Context, sensor *domain.Sensor) (*do
 	}
 
 	findSensor, err := s.sr.GetSensorBySerialNumber(ctx, sensor.SerialNumber)
-	if errors.Is(err, inmemory.ErrSensorNotFound) {
+	if errors.Is(err, ErrSensorNotFound) {
 		return sensor, s.sr.SaveSensor(ctx, sensor)
 	}
 
