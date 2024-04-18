@@ -2,8 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"homework/internal/domain"
 	"homework/internal/models"
+	"homework/internal/usecase"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,7 +37,7 @@ func setupRouter(r *gin.Engine, uc UseCases) {
 		user := &domain.User{Name: *userDto.Name}
 		user, err := uc.User.RegisterUser(c, user)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -56,7 +58,7 @@ func setupRouter(r *gin.Engine, uc UseCases) {
 
 		sensors, err := uc.Sensor.GetSensors(c)
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 		}
 		c.JSON(http.StatusOK, sensors)
 	})
@@ -126,9 +128,15 @@ func setupRouter(r *gin.Engine, uc UseCases) {
 			c.AbortWithStatusJSON(http.StatusUnprocessableEntity, err)
 			return
 		}
+
 		sensor, err := uc.Sensor.GetSensorByID(c, id)
-		if err != nil {
+		if errors.Is(err, usecase.ErrSensorNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -148,8 +156,13 @@ func setupRouter(r *gin.Engine, uc UseCases) {
 		}
 
 		sensor, err := uc.Sensor.GetSensorByID(c, id)
-		if err != nil {
+		if errors.Is(err, usecase.ErrSensorNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -182,9 +195,13 @@ func setupRouter(r *gin.Engine, uc UseCases) {
 		}
 
 		sensors, err := uc.User.GetUserSensors(c, id)
-		if err != nil {
+		if errors.Is(err, usecase.ErrUserNotFound) || errors.Is(err, usecase.ErrSensorNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
 			return
+		}
+
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 		}
 
 		if c.GetHeader("Accept") != "application/json" {
@@ -242,8 +259,13 @@ func setupRouter(r *gin.Engine, uc UseCases) {
 		}
 
 		err = uc.User.AttachSensorToUser(c, userId, *sensorDto.SensorID)
-		if err != nil {
+		if errors.Is(err, usecase.ErrUserNotFound) || errors.Is(err, usecase.ErrSensorNotFound) {
 			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -286,8 +308,13 @@ func setupRouter(r *gin.Engine, uc UseCases) {
 		}
 
 		err := uc.Event.ReceiveEvent(c, event)
+		if errors.Is(err, usecase.ErrSensorNotFound) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 			return
 		}
 

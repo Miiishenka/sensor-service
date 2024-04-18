@@ -12,6 +12,7 @@ var ErrEventIsNil = errors.New("event is nil")
 
 type EventRepository struct {
 	events sync.Map
+	mu     sync.Mutex
 }
 
 func NewEventRepository() *EventRepository {
@@ -27,8 +28,6 @@ func (r *EventRepository) getEvents(sensorId int64) []*domain.Event {
 	return owners.([]*domain.Event)
 }
 
-var mu sync.Mutex
-
 func (r *EventRepository) SaveEvent(ctx context.Context, event *domain.Event) error {
 	select {
 	case <-ctx.Done():
@@ -38,9 +37,9 @@ func (r *EventRepository) SaveEvent(ctx context.Context, event *domain.Event) er
 			return ErrEventIsNil
 		}
 
-		mu.Lock()
+		r.mu.Lock()
 		r.events.Store(event.SensorID, append(r.getEvents(event.SensorID), event))
-		mu.Unlock()
+		r.mu.Unlock()
 		return nil
 	}
 }

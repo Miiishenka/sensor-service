@@ -4,14 +4,12 @@ import (
 	"context"
 	"errors"
 	"homework/internal/domain"
+	"homework/internal/usecase"
 	"sync"
 	"sync/atomic"
 )
 
-var (
-	ErrUserNotFound = errors.New("user not found")
-	ErrUserIsNull   = errors.New("user is nil")
-)
+var ErrUserIsNull = errors.New("user is nil")
 
 type UserRepository struct {
 	users  sync.Map
@@ -43,7 +41,7 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id int64) (*domain.Use
 	default:
 		user, ok := r.users.Load(id)
 		if !ok {
-			return nil, ErrUserNotFound
+			return nil, usecase.ErrUserNotFound
 		}
 
 		return user.(*domain.User), nil

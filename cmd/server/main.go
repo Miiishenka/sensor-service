@@ -29,8 +29,17 @@ func main() {
 		User:   usecase.NewUser(ur, sor, sr),
 	}
 
-	httpHost := os.Getenv("HTTP_HOST")
-	httpPort, err := strconv.ParseUint(os.Getenv("HTTP_PORT"), 10, 16)
+	httpHost, ok := os.LookupEnv("HTTP_HOST")
+	if !ok {
+		httpHost = "localhost"
+	}
+
+	httpPortEnv, ok := os.LookupEnv("HTTP_PORT")
+	if !ok {
+		httpHost = "8080"
+	}
+
+	httpPort, err := strconv.ParseUint(httpPortEnv, 10, 16)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "HTTP_PORT should be unsigned 16-bit integer")
 		os.Exit(1)
