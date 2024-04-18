@@ -36,7 +36,7 @@ func main() {
 
 	httpPortEnv, ok := os.LookupEnv("HTTP_PORT")
 	if !ok {
-		httpHost = "8080"
+		httpPortEnv = "8080"
 	}
 
 	httpPort, err := strconv.ParseUint(httpPortEnv, 10, 16)
