@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -29,7 +30,12 @@ func (h *WebSocketHandler) Handle(c *gin.Context, id int64) error {
 	ticker := time.NewTicker(1 * time.Second)
 
 	go func() {
-		defer conn.Close(websocket.StatusNormalClosure, "Connection is closed")
+		defer func() {
+			err := conn.Close(websocket.StatusNormalClosure, "Connection is closed")
+			if err != nil {
+				log.Printf("error while closing connection: %v", err)
+			}
+		}()
 		defer ticker.Stop()
 
 		for {
@@ -41,11 +47,13 @@ func (h *WebSocketHandler) Handle(c *gin.Context, id int64) error {
 			case <-ticker.C:
 				event, err := h.useCases.Event.GetLastEventBySensorID(c, id)
 				if err != nil {
+					log.Printf("error while getting event: %v", err)
 					return
 				}
 
 				err = wsjson.Write(c, conn, event)
 				if err != nil {
+					log.Printf("error while sending json: %v", err)
 					return
 				}
 			}

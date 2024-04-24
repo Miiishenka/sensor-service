@@ -340,7 +340,10 @@ func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 		}
 
 		if err = h.Handle(c, sensorId); err != nil {
-			c.AbortWithStatusJSON(http.StatusBadRequest, err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
+			return
 		}
+
+		c.Status(http.StatusSwitchingProtocols)
 	})
 }
