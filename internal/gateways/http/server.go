@@ -1,16 +1,20 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"homework/internal/usecase"
+	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
 type Server struct {
-	host   string
-	port   uint16
-	router *gin.Engine
+	host    string
+	port    uint16
+	router  *gin.Engine
+	handler *WebSocketHandler
 }
 
 type UseCases struct {
@@ -21,9 +25,10 @@ type UseCases struct {
 
 func NewServer(useCases UseCases, options ...func(*Server)) *Server {
 	r := gin.Default()
-	setupRouter(r, useCases)
+	handler := NewWebSocketHandler(useCases)
+	setupRouter(r, useCases, handler)
 
-	s := &Server{router: r, host: "localhost", port: 8080}
+	s := &Server{router: r, host: "localhost", port: 8080, handler: handler}
 	for _, o := range options {
 		o(s)
 	}
@@ -43,6 +48,21 @@ func WithPort(port uint16) func(*Server) {
 	}
 }
 
-func (s *Server) Run() error {
-	return s.router.Run(fmt.Sprintf("%s:%d", s.host, s.port))
+func (s *Server) Run(ctx context.Context) error {
+	srv := &http.Server{
+		Addr:    fmt.Sprintf("%s:%d", s.host, s.port),
+		Handler: s.router,
+	}
+
+	go func() {
+		<-ctx.Done()
+		if err := srv.Shutdown(ctx); err != nil {
+			log.Printf("error while closing server: %v", err)
+		}
+		if err := s.handler.Shutdown(); err != nil {
+			log.Printf("error while closing web-socket: %v", err)
+		}
+	}()
+
+	return srv.ListenAndServe()
 }

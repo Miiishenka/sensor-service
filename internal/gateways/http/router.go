@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setupRouter(r *gin.Engine, uc UseCases) {
+func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 	r.HandleMethodNotAllowed = true
 
 	r.POST("/users", func(c *gin.Context) {
@@ -325,5 +325,22 @@ func setupRouter(r *gin.Engine, uc UseCases) {
 		methods := []string{http.MethodOptions, http.MethodPost}
 		c.Header("Allow", strings.Join(methods, ","))
 		c.Status(http.StatusNoContent)
+	})
+
+	r.GET("/sensors/:id/events", func(c *gin.Context) {
+		sensorId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
+			return
+		}
+
+		if _, err = uc.Sensor.GetSensorByID(c, sensorId); errors.Is(err, usecase.ErrSensorNotFound) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
+		if err = h.Handle(c, sensorId); err != nil {
+			c.AbortWithStatusJSON(http.StatusBadRequest, err)
+		}
 	})
 }

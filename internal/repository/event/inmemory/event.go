@@ -51,12 +51,12 @@ func (r *EventRepository) GetLastEventBySensorID(ctx context.Context, id int64) 
 	default:
 		value, ok := r.events.Load(id)
 		if !ok {
-			return nil, usecase.ErrEventNotFound
+			return nil, usecase.ErrSensorNotFound
 		}
 
 		events, ok := value.([]*domain.Event)
 		if !ok || len(events) < 1 {
-			return nil, usecase.ErrEventNotFound
+			return nil, usecase.ErrSensorNotFound
 		}
 
 		lastEvent := events[0]

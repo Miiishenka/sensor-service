@@ -3,12 +3,13 @@ package main
 //go:generate swagger generate model -f ../../api/swagger.yaml -t ../../internal/
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"homework/internal/usecase"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 
 	httpGateway "homework/internal/gateways/http"
@@ -18,6 +19,9 @@ import (
 )
 
 func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
 	er := eventRepository.NewEventRepository()
 	sr := sensorRepository.NewSensorRepository()
 	ur := userRepository.NewUserRepository()
@@ -29,29 +33,25 @@ func main() {
 		User:   usecase.NewUser(ur, sor, sr),
 	}
 
-	httpHost, ok := os.LookupEnv("HTTP_HOST")
-	if !ok {
-		httpHost = "localhost"
+	var functions []func(*httpGateway.Server)
+
+	if httpHost, ok := os.LookupEnv("HTTP_HOST"); ok {
+		functions = append(functions, httpGateway.WithHost(httpHost))
 	}
 
-	httpPortEnv, ok := os.LookupEnv("HTTP_PORT")
-	if !ok {
-		httpPortEnv = "8080"
-	}
-
-	httpPort, err := strconv.ParseUint(httpPortEnv, 10, 16)
-	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "HTTP_PORT should be unsigned 16-bit integer")
-		os.Exit(1)
+	if httpPortEnv, ok := os.LookupEnv("HTTP_PORT"); ok {
+		httpPort, err := strconv.ParseUint(httpPortEnv, 10, 16)
+		if err == nil {
+			functions = append(functions, httpGateway.WithPort(uint16(httpPort)))
+		}
 	}
 
 	r := httpGateway.NewServer(
 		useCases,
-		httpGateway.WithHost(httpHost),
-		httpGateway.WithPort(uint16(httpPort)),
+		functions...,
 	)
 
-	if err := r.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := r.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Printf("error during server shutdown: %v", err)
 	}
 }
