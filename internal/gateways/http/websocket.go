@@ -47,8 +47,7 @@ func (h *WebSocketHandler) Handle(c *gin.Context, id int64) error {
 			case <-ticker.C:
 				event, err := h.useCases.Event.GetLastEventBySensorID(c, id)
 				if err != nil {
-					log.Printf("error while getting event: %v", err)
-					return
+					continue
 				}
 
 				err = wsjson.Write(c, conn, event)
@@ -64,7 +63,8 @@ func (h *WebSocketHandler) Handle(c *gin.Context, id int64) error {
 }
 
 func (h *WebSocketHandler) Shutdown() error {
-	h.closeChan <- struct{}{}
+	defer close(h.closeChan)
 
+	h.closeChan <- struct{}{}
 	return nil
 }

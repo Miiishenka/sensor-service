@@ -6,6 +6,7 @@ import (
 	"homework/internal/usecase"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 )
@@ -54,15 +55,23 @@ func (s *Server) Run(ctx context.Context) error {
 		Handler: s.router,
 	}
 
+	var serverErr error
+	var wg sync.WaitGroup
 	go func() {
-		<-ctx.Done()
-		if err := srv.Shutdown(ctx); err != nil {
-			log.Printf("error while closing server: %v", err)
-		}
-		if err := s.handler.Shutdown(); err != nil {
-			log.Printf("error while closing web-socket: %v", err)
-		}
+		defer wg.Done()
+		serverErr = srv.ListenAndServe()
 	}()
+	wg.Add(1)
 
-	return srv.ListenAndServe()
+	<-ctx.Done()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("error while closing server: %v", err)
+	}
+	if err := s.handler.Shutdown(); err != nil {
+		log.Printf("error while closing web-socket: %v", err)
+	}
+
+	wg.Wait()
+
+	return serverErr
 }

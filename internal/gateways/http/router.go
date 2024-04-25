@@ -343,7 +343,5 @@ func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 			return
 		}
-
-		c.Status(http.StatusSwitchingProtocols)
 	})
 }
