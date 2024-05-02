@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/json"
 	"errors"
-	"github.com/go-openapi/strfmt"
 	"homework/internal/domain"
 	"homework/internal/models"
 	"homework/internal/usecase"
@@ -11,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-openapi/strfmt"
 
 	"github.com/gin-gonic/gin"
 )
@@ -383,8 +384,9 @@ func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 		var sensorStates []models.SensorState
 		for _, event := range events {
 			timestamp := strfmt.DateTime(event.Timestamp)
+			payload := event.Payload
 			sensorStates = append(sensorStates, models.SensorState{
-				Payload:   &event.Payload,
+				Payload:   &payload,
 				Timestamp: &timestamp,
 			})
 		}
@@ -432,9 +434,10 @@ func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 
 		var sensorStates []models.SensorState
 		for _, event := range events {
+			payload := event.Payload
 			timestamp := strfmt.DateTime(event.Timestamp)
 			sensorStates = append(sensorStates, models.SensorState{
-				Payload:   &event.Payload,
+				Payload:   &payload,
 				Timestamp: &timestamp,
 			})
 		}
