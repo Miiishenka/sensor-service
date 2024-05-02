@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"homework/internal/domain"
+	"time"
 )
 
 type Event struct {
@@ -43,4 +44,8 @@ func (e *Event) ReceiveEvent(ctx context.Context, event *domain.Event) error {
 
 func (e *Event) GetLastEventBySensorID(ctx context.Context, id int64) (*domain.Event, error) {
 	return e.er.GetLastEventBySensorID(ctx, id)
+}
+
+func (e *Event) GetSensorHistory(ctx context.Context, sensorId int64, start, end time.Time) ([]domain.Event, error) {
+	return e.er.GetSensorHistory(ctx, sensorId, start, end)
 }

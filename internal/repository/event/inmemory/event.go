@@ -6,6 +6,7 @@ import (
 	"homework/internal/domain"
 	"homework/internal/usecase"
 	"sync"
+	"time"
 )
 
 var ErrEventIsNil = errors.New("event is nil")
@@ -67,5 +68,31 @@ func (r *EventRepository) GetLastEventBySensorID(ctx context.Context, id int64) 
 		}
 
 		return lastEvent, nil
+	}
+}
+
+func (r *EventRepository) GetSensorHistory(ctx context.Context, sensorId int64, start, end time.Time) ([]domain.Event, error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		value, ok := r.events.Load(sensorId)
+		if !ok {
+			return nil, usecase.ErrEventNotFound
+		}
+
+		events, ok := value.([]*domain.Event)
+		if !ok || len(events) < 1 {
+			return nil, usecase.ErrEventNotFound
+		}
+
+		var history []domain.Event
+		for _, event := range events {
+			if event.Timestamp.After(start) && event.Timestamp.Before(end) {
+				history = append(history, *event)
+			}
+		}
+
+		return history, nil
 	}
 }

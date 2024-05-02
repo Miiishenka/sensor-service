@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"github.com/go-openapi/strfmt"
 	"homework/internal/domain"
 	"homework/internal/models"
 	"homework/internal/usecase"
@@ -322,7 +323,7 @@ func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 	})
 
 	r.OPTIONS("/events", func(c *gin.Context) {
-		methods := []string{http.MethodOptions, http.MethodPost}
+		methods := []string{http.MethodOptions, http.MethodGet, http.MethodHead}
 		c.Header("Allow", strings.Join(methods, ","))
 		c.Status(http.StatusNoContent)
 	})
@@ -343,5 +344,103 @@ func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 			c.AbortWithStatusJSON(http.StatusInternalServerError, err)
 			return
 		}
+	})
+
+	r.OPTIONS("/sensors/:id/history", func(c *gin.Context) {
+		methods := []string{http.MethodOptions, http.MethodGet, http.MethodHead}
+		c.Header("Allow", strings.Join(methods, ","))
+		c.Status(http.StatusNoContent)
+	})
+
+	r.GET("/sensors/:id/history", func(c *gin.Context) {
+		sensorId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
+			return
+		}
+
+		if _, err := uc.Sensor.GetSensorByID(c, sensorId); errors.Is(err, usecase.ErrSensorNotFound) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
+		startDate, err := time.Parse("2006-01-02T15:04:05.999Z", c.Query("start_date"))
+		if err != nil {
+			startDate = time.Time{}
+		}
+
+		endDate, err := time.Parse("2006-01-02T15:04:05.999Z", c.Query("end_date"))
+		if err != nil {
+			endDate = time.Now()
+		}
+
+		events, err := uc.Event.GetSensorHistory(c, sensorId, startDate, endDate)
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		var sensorStates []models.SensorState
+		for _, event := range events {
+			timestamp := strfmt.DateTime(event.Timestamp)
+			sensorStates = append(sensorStates, models.SensorState{
+				Payload:   &event.Payload,
+				Timestamp: &timestamp,
+			})
+		}
+
+		if c.GetHeader("Accept") != "application/json" {
+			c.AbortWithStatus(http.StatusNotAcceptable)
+			return
+		}
+
+		c.JSON(http.StatusOK, sensorStates)
+	})
+
+	r.HEAD("/sensors/:id/history", func(c *gin.Context) {
+		if c.GetHeader("Accept") != "application/json" {
+			c.AbortWithStatus(http.StatusNotAcceptable)
+			return
+		}
+
+		sensorId, err := strconv.ParseInt(c.Param("id"), 10, 64)
+		if err != nil {
+			c.AbortWithStatus(http.StatusUnprocessableEntity)
+			return
+		}
+
+		if _, err := uc.Sensor.GetSensorByID(c, sensorId); errors.Is(err, usecase.ErrSensorNotFound) {
+			c.AbortWithStatus(http.StatusNotFound)
+			return
+		}
+
+		startDate, err := time.Parse("2006-01-02T15:04:05.999Z", c.Query("start_date"))
+		if err != nil {
+			startDate = time.Time{}
+		}
+
+		endDate, err := time.Parse("2006-01-02T15:04:05.999Z", c.Query("end_date"))
+		if err != nil {
+			endDate = time.Now()
+		}
+
+		events, err := uc.Event.GetSensorHistory(c, sensorId, startDate, endDate)
+		if err != nil {
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		var sensorStates []models.SensorState
+		for _, event := range events {
+			timestamp := strfmt.DateTime(event.Timestamp)
+			sensorStates = append(sensorStates, models.SensorState{
+				Payload:   &event.Payload,
+				Timestamp: &timestamp,
+			})
+		}
+
+		jsonSensor, _ := json.Marshal(sensorStates)
+		c.Header("Content-Length", strconv.Itoa(len(jsonSensor)))
+		c.Status(http.StatusOK)
 	})
 }

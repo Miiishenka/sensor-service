@@ -4,6 +4,7 @@ import (
 	"context"
 	"homework/internal/domain"
 	"homework/internal/usecase"
+	"math/rand/v2"
 	"sync"
 	"testing"
 	"time"
@@ -147,5 +148,103 @@ func TestEventRepository_GetLastEventBySensorID(t *testing.T) {
 		assert.Equal(t, lastEvent.Timestamp, actualEvent.Timestamp)
 		assert.Equal(t, lastEvent.SensorSerialNumber, actualEvent.SensorSerialNumber)
 		assert.Equal(t, lastEvent.Payload, actualEvent.Payload)
+	})
+}
+
+func TestEventRepository_GetSensorHistory(t *testing.T) {
+	t.Run("fail, ctx cancelled", func(t *testing.T) {
+		er := NewEventRepository()
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
+
+		_, err := er.GetSensorHistory(ctx, 0, time.Time{}, time.Now())
+		assert.ErrorIs(t, err, context.Canceled)
+	})
+
+	t.Run("fail, ctx deadline exceeded", func(t *testing.T) {
+		er := NewEventRepository()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
+		defer cancel()
+
+		_, err := er.GetSensorHistory(ctx, 0, time.Time{}, time.Now())
+		assert.ErrorIs(t, err, context.DeadlineExceeded)
+	})
+
+	t.Run("fail, event not found", func(t *testing.T) {
+		er := NewEventRepository()
+		_, err := er.GetLastEventBySensorID(context.Background(), 234)
+		assert.ErrorIs(t, err, usecase.ErrEventNotFound)
+	})
+
+	t.Run("ok, save and get segment", func(t *testing.T) {
+		er := NewEventRepository()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		sensorID := int64(12345)
+		var start time.Time
+		var end time.Time
+		var expectedEvents []domain.Event
+		for i := 0; i < 100; i++ {
+			lastEvent := &domain.Event{
+				Timestamp: time.Now(),
+				SensorID:  sensorID,
+				Payload:   0,
+			}
+			time.Sleep(10 * time.Millisecond)
+			assert.NoError(t, er.SaveEvent(ctx, lastEvent))
+
+			if i == 20 {
+				start = lastEvent.Timestamp
+			} else if 21 <= i && i <= 80 {
+				expectedEvents = append(expectedEvents, *lastEvent)
+			} else if i == 81 {
+				end = lastEvent.Timestamp
+			}
+		}
+
+		for i := 0; i < 10; i++ {
+			event := &domain.Event{
+				Timestamp: time.Now(),
+				SensorID:  54321,
+				Payload:   0,
+			}
+			assert.NoError(t, er.SaveEvent(ctx, event))
+		}
+
+		actualEvents, err := er.GetSensorHistory(ctx, sensorID, start, end)
+		assert.NoError(t, err)
+		assert.NotNil(t, actualEvents)
+		assert.Len(t, actualEvents, 60)
+		assert.Equal(t, actualEvents, expectedEvents)
+	})
+}
+
+func FuzzEventRepository_GetLastEventBySensorID(f *testing.F) {
+	f.Add(1000)
+
+	f.Fuzz(func(t *testing.T, n int) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		er := NewEventRepository()
+
+		lastEvents := make(map[int64]*domain.Event)
+		for range n {
+			sensorID := int64(rand.Int() % n)
+			event := &domain.Event{
+				Timestamp: time.Now(),
+				SensorID:  sensorID,
+				Payload:   0,
+			}
+			err := er.SaveEvent(ctx, event)
+			assert.NoError(t, err)
+			lastEvents[sensorID] = event
+		}
+
+		for sensorID, expectedEvent := range lastEvents {
+			actualEvent, err := er.GetLastEventBySensorID(ctx, sensorID)
+			assert.NoError(t, err)
+			assert.Equal(t, actualEvent, expectedEvent)
+		}
 	})
 }

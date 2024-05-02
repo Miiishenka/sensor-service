@@ -8,6 +8,7 @@ import (
 	context "context"
 	domain "homework/internal/domain"
 	reflect "reflect"
+	time "time"
 
 	gomock "github.com/golang/mock/gomock"
 )
@@ -130,6 +131,21 @@ func (m *MockEventRepository) GetLastEventBySensorID(ctx context.Context, id int
 func (mr *MockEventRepositoryMockRecorder) GetLastEventBySensorID(ctx, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLastEventBySensorID", reflect.TypeOf((*MockEventRepository)(nil).GetLastEventBySensorID), ctx, id)
+}
+
+// GetSensorHistory mocks base method.
+func (m *MockEventRepository) GetSensorHistory(ctx context.Context, id int64, start, end time.Time) ([]domain.Event, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSensorHistory", ctx, id, start, end)
+	ret0, _ := ret[0].([]domain.Event)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSensorHistory indicates an expected call of GetSensorHistory.
+func (mr *MockEventRepositoryMockRecorder) GetSensorHistory(ctx, id, start, end interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSensorHistory", reflect.TypeOf((*MockEventRepository)(nil).GetSensorHistory), ctx, id, start, end)
 }
 
 // SaveEvent mocks base method.

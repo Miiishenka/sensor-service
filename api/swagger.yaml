@@ -5,7 +5,7 @@ info:
   version: "0.1"
 host: "localhost:8080"
 basePath: "/api"
-schemes: ["http"]
+schemes: [ "http" ]
 tags:
   - name: events
   - name: sensors
@@ -141,6 +141,50 @@ paths:
               type: array
               items:
                 type: string
+  /sensors/{sensor_id}/history:
+    get:
+      summary: Получение истории состояний датчика
+      description: Возвращает историю состояний датчика с start_date по end_date
+      tags:
+        - sensors
+      produces:
+        - application/json
+      parameters:
+        - name: sensor_id
+          in: path
+          description: Идентификатор датчика
+          required: true
+          type: integer
+          format: int64
+        - name: start_date
+          in: query
+          description: Начальное время
+          required: false
+          type: string
+          format: date
+        - name: end_date
+          in: query
+          description: Конечное время
+          required: false
+          type: string
+          format: date
+      responses:
+        "200":
+          description: Успех
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/SensorState"
+        "404":
+          description: Датчик с указанным идентификатором не найден
+        "422":
+          description: Идентификатор датчика не валиден
+        "406":
+          description: Запрошен неподдерживаемый формат тела ответа
+        default:
+          description: Ошибка исполнения
+          schema:
+            $ref: "#/definitions/Error"
   /sensors/{sensor_id}/events:
     get:
       summary: Открытие ws по датчику
@@ -580,3 +624,19 @@ definitions:
     example:
       sensor_serial_number: "1234567890"
       payload: 10
+  SensorState:
+    title: SensorState
+    description: Состояние датчика
+    type: object
+    properties:
+      timestamp:
+        description: Дата и время события
+        type: string
+        format: date-time
+      payload:
+        description: Значение датчика
+        type: integer
+        format: int64
+    required:
+      - timestamp
+      - payload

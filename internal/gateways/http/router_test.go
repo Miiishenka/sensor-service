@@ -3,14 +3,13 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 	"homework/internal/usecase"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 
 	eventRepository "homework/internal/repository/event/inmemory"
 	sensorRepository "homework/internal/repository/sensor/inmemory"
@@ -701,7 +700,8 @@ func TestEventsRoutes(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, w.Code, "Получили в ответ не тот код")
 		allowed := strings.Split(w.Header().Get("Allow"), ",")
 		assert.Contains(t, allowed, http.MethodOptions, "В разрешённых методах нет OPTIONS")
-		assert.Contains(t, allowed, http.MethodPost, "В разрешённых методах нет POST")
+		assert.Contains(t, allowed, http.MethodGet, "В разрешённых методах нет GET")
+		assert.Contains(t, allowed, http.MethodHead, "В разрешённых методах нет HEAD")
 	})
 
 	// Другие методы не поддерживаем.
@@ -723,6 +723,93 @@ func TestEventsRoutes(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				w := httptest.NewRecorder()
 				req, _ := http.NewRequest(tt.input, "/events", nil)
+				router.ServeHTTP(w, req)
+
+				assert.Equal(t, tt.want, w.Code, "Получили в ответ не тот код")
+				// allowed := strings.Split(w.Header().Get("Allow"), ",")
+				// assert.Contains(t, allowed, http.MethodOptions, "В разрешённых методах нет OPTIONS")
+				// assert.Contains(t, allowed, http.MethodPost, "В разрешённых методах нет POST")
+			})
+		}
+	})
+}
+
+// Тесты /sensors/{sensor_id}/history
+func TestSensorHistoryRoute(t *testing.T) {
+	// Тесты sensors/{sensor_id}/history
+	t.Run("GET_sensors_sensor_id_history", func(t *testing.T) {
+		t.Run("sensor_exists_200", func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			req, _ := http.NewRequest(http.MethodGet, "/sensors/1/history", nil)
+			req.Header.Add("Accept", "application/json")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusOK, w.Code, "Получили в ответ не тот код")
+			assert.True(t, json.Valid(w.Body.Bytes()), "В ответе не json")
+		})
+
+		t.Run("id_has_invalid_format_422", func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			req, _ := http.NewRequest(http.MethodGet, "/sensors/abc/history", nil)
+			req.Header.Add("Accept", "application/json")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusUnprocessableEntity, w.Code, "Получили в ответ не тот код")
+		})
+
+		t.Run("requested_unsupported_body_format_406", func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			req, _ := http.NewRequest(http.MethodGet, "/sensors/1/history", nil)
+			req.Header.Add("Accept", "application/xml")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusNotAcceptable, w.Code, "Получили в ответ не тот код")
+		})
+
+		t.Run("sensor_doesnt_exist_404", func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			req, _ := http.NewRequest(http.MethodGet, "/sensors/2/history", nil)
+			req.Header.Add("Accept", "application/json")
+			router.ServeHTTP(w, req)
+
+			assert.Equal(t, http.StatusNotFound, w.Code, "Получили в ответ не тот код")
+		})
+	})
+
+	t.Run("OPTIONS_sensors_sensor_id_history_204", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodOptions, "/sensors/1/history", nil)
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNoContent, w.Code, "Получили в ответ не тот код")
+		allowed := strings.Split(w.Header().Get("Allow"), ",")
+		assert.Contains(t, allowed, http.MethodOptions, "В разрешённых методах нет OPTIONS")
+		assert.Contains(t, allowed, http.MethodGet, "В разрешённых методах нет GET")
+		assert.Contains(t, allowed, http.MethodHead, "В разрешённых методах нет HEAD")
+	})
+
+	// Другие методы не поддерживаем.
+	t.Run("OTHER_sensors_sensor_id_405", func(t *testing.T) {
+		tests := []struct {
+			name  string
+			input string
+			want  int
+		}{
+			{http.MethodPost, http.MethodPost, http.StatusMethodNotAllowed},
+			{http.MethodPut, http.MethodPut, http.StatusMethodNotAllowed},
+			{http.MethodDelete, http.MethodDelete, http.StatusMethodNotAllowed},
+			{http.MethodPatch, http.MethodPatch, http.StatusMethodNotAllowed},
+			{http.MethodConnect, http.MethodConnect, http.StatusMethodNotAllowed},
+			{http.MethodTrace, http.MethodTrace, http.StatusMethodNotAllowed},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				w := httptest.NewRecorder()
+				req, _ := http.NewRequest(tt.input, "/sensors/1/history", nil)
 				router.ServeHTTP(w, req)
 
 				assert.Equal(t, tt.want, w.Code, "Получили в ответ не тот код")
