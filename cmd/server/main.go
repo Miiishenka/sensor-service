@@ -5,6 +5,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"homework/internal/usecase"
 	"log"
 	"net/http"
@@ -21,6 +22,17 @@ import (
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+	config, err := pgxpool.ParseConfig(os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Fatalf("can't parse pgxpool config")
+	}
+
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+	if err != nil {
+		log.Fatalf("can't create new pool")
+	}
+	defer pool.Close()
 
 	er := eventRepository.NewEventRepository()
 	sr := sensorRepository.NewSensorRepository()

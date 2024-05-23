@@ -324,7 +324,7 @@ func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 	})
 
 	r.OPTIONS("/events", func(c *gin.Context) {
-		methods := []string{http.MethodOptions, http.MethodGet, http.MethodHead}
+		methods := []string{http.MethodOptions, http.MethodGet, http.MethodHead, http.MethodPost}
 		c.Header("Allow", strings.Join(methods, ","))
 		c.Status(http.StatusNoContent)
 	})
