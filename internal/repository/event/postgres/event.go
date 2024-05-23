@@ -3,9 +3,10 @@ package postgres
 import (
 	"context"
 	"errors"
-	"github.com/jackc/pgx/v5"
 	"homework/internal/domain"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )

@@ -5,13 +5,14 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"homework/internal/usecase"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	httpGateway "homework/internal/gateways/http"
 	eventRepository "homework/internal/repository/event/inmemory"
