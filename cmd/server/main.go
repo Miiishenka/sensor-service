@@ -12,6 +12,8 @@ import (
 	"os/signal"
 	"strconv"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	httpGateway "homework/internal/gateways/http"
@@ -63,6 +65,14 @@ func main() {
 		useCases,
 		functions...,
 	)
+
+	metricServer := http.NewServeMux()
+	metricServer.Handle("/", promhttp.Handler())
+	go func() {
+		if err := http.ListenAndServe(":8090", metricServer); err != nil {
+			log.Printf("error during metric server shutdown: %v", err)
+		}
+	}()
 
 	if err := r.Run(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Printf("error during server shutdown: %v", err)

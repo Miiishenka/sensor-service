@@ -4,9 +4,19 @@ import (
 	"log"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"github.com/gin-gonic/gin"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
+)
+
+var activeWebsockets = promauto.NewGauge(
+	prometheus.GaugeOpts{
+		Name: "active_websockets",
+		Help: "Number of currently active WebSocket connections",
+	},
 )
 
 type WebSocketHandler struct {
@@ -29,12 +39,15 @@ func (h *WebSocketHandler) Handle(c *gin.Context, id int64) error {
 	ctx := conn.CloseRead(c)
 	ticker := time.NewTicker(1 * time.Second)
 
+	activeWebsockets.Inc()
+
 	go func() {
 		defer func() {
 			err := conn.Close(websocket.StatusNormalClosure, "Connection is closed")
 			if err != nil {
 				log.Printf("error while closing connection: %v", err)
 			}
+			activeWebsockets.Dec()
 		}()
 		defer ticker.Stop()
 

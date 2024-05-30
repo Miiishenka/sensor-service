@@ -11,13 +11,56 @@ import (
 	"strings"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+
 	"github.com/go-openapi/strfmt"
 
 	"github.com/gin-gonic/gin"
 )
 
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"path", "method"},
+	)
+	httpRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Duration of HTTP requests in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"path", "method"},
+	)
+	httpRequestsErrorsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_errors_total",
+			Help: "Total number of HTTP errors",
+		},
+		[]string{"path", "method"},
+	)
+)
+
 func setupRouter(r *gin.Engine, uc UseCases, h *WebSocketHandler) {
 	r.HandleMethodNotAllowed = true
+
+	r.Use(func(c *gin.Context) {
+		path := c.FullPath()
+		method := c.Request.Method
+
+		timer := prometheus.NewTimer(httpRequestDuration.WithLabelValues(path, method))
+		defer timer.ObserveDuration()
+
+		c.Next()
+
+		httpRequestsTotal.WithLabelValues(path, method).Inc()
+		if c.Writer.Status() >= 400 {
+			httpRequestsErrorsTotal.WithLabelValues(path, method).Inc()
+		}
+	})
 
 	r.POST("/users", func(c *gin.Context) {
 		if c.ContentType() != "application/json" {
