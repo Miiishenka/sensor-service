@@ -2,7 +2,7 @@
 
 FROM golang:1.20 as builder
 
-WORKDIR /app
+WORKDIR /
 
 COPY go.mod go.sum ./
 RUN go mod download
@@ -13,9 +13,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o sensor-app ./cmd/server/main.go
 
 FROM alpine:edge
 
-WORKDIR /app
+WORKDIR /
 
-COPY --from=builder /app/sensor-app .
+COPY --from=builder /sensor-app .
 
 EXPOSE 8080
 
