@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY . ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o sensor-app
+RUN CGO_ENABLED=0 GOOS=linux go build -o sensor-app homework/cmd/server
 
 FROM alpine:edge
 
