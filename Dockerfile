@@ -15,10 +15,6 @@ FROM alpine:edge
 
 WORKDIR /app
 
-RUN app-get update && \
-    app-get install openssl && \
-    apk --no-cache add ca-certificates
-
 COPY --from=builder /app/sensor-app .
 
 EXPOSE 8080
